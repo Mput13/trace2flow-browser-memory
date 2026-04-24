@@ -1,0 +1,25 @@
+[project]
+name = "workflow-memory"
+version = "0.1.0"
+description = "Workflow memory layer for browser-use"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "browser-use==0.12.6",
+  "playwright",
+  "typer>=0.15.3",
+  "pydantic>=2.11.3",
+  "PyYAML>=6.0.2",
+  "rapidfuzz>=3.13.0",
+  "openai>=1.76.0",
+  "langchain-openai>=0.3.14",
+  "python-dotenv>=1.0.1",
+  "pytest>=8.3.5",
+]
+
+[project.scripts]
+workflow-memory = "workflow_memory.cli:app"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
