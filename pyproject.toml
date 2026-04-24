@@ -2,7 +2,6 @@
 name = "workflow-memory"
 version = "0.1.0"
 description = "Workflow memory layer for browser-use"
-readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
   "browser-use==0.12.6",

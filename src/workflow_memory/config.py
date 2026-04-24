@@ -1,26 +1,30 @@
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
-class AdmissionConfig(BaseModel):
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class AdmissionConfig(StrictModel):
     min_relative_improvement: float
     require_no_success_regression: bool
 
 
-class RetrievalConfig(BaseModel):
+class RetrievalConfig(StrictModel):
     categorical_weight: float
     set_weight: float
     numeric_weight: float
     text_weight: float
 
 
-class ParallelismConfig(BaseModel):
+class ParallelismConfig(StrictModel):
     max_workers: int
 
 
-class ProjectConfig(BaseModel):
+class ProjectConfig(StrictModel):
     judge_model: str
     optimize_model: str
     sqlite_path: str
