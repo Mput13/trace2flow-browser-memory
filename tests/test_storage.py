@@ -85,10 +85,8 @@ def test_insert_run_cleans_up_artifacts_when_db_insert_fails(tmp_path: Path) -> 
 
 
 def test_duplicate_insert_keeps_existing_artifacts(tmp_path: Path) -> None:
-    db_path = tmp_path / "workflow_memory.sqlite"
     artifacts_root = tmp_path / "artifacts"
     store = ArtifactStore(artifacts_root)
-    repo = RunRepository(db_path)
 
     original_run = RunArtifact(
         run_id="run-003",
@@ -103,20 +101,17 @@ def test_duplicate_insert_keeps_existing_artifacts(tmp_path: Path) -> None:
         original_run, {"trace": ["original"]}, {"normalized": []}, {"result": {}}
     )
     original_run_dir = Path(original_paths["trace"]).parent
-    repo.insert_run(original_run, original_paths)
-
-    duplicate_paths = store.write_run_artifacts(
-        original_run, {"trace": ["duplicate"]}, {"normalized": []}, {"result": {}}
-    )
 
     try:
-        repo.insert_run(original_run, duplicate_paths)
-    except sqlite3.IntegrityError:
+        store.write_run_artifacts(
+            original_run, {"trace": ["duplicate"]}, {"normalized": []}, {"result": {}}
+        )
+    except FileExistsError:
         pass
     else:
-        raise AssertionError("expected duplicate sqlite insert to fail")
+        raise AssertionError("expected duplicate artifact write to fail")
 
     assert original_run_dir.exists()
     assert json.loads(Path(original_paths["trace"]).read_text(encoding="utf-8")) == {
-        "trace": ["duplicate"]
+        "trace": ["original"]
     }
