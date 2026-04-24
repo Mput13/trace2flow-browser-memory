@@ -4,9 +4,12 @@
 
 This project is a research prototype for a workflow-memory layer on top of a real `browser-use` runtime. The system executes repeated browser tasks on concrete sites, analyzes the baseline trajectory, synthesizes an optimized workflow, reruns the task with structured hints, and admits the resulting memory only if the optimized rerun is verified and measurably better.
 
-The prototype is designed around two equal benchmark contexts:
+The prototype is designed around two reproducible public benchmark contexts:
 - `Recreation.gov` as a public, no-login site
-- `my.mai.ru` as an authenticated site with session reuse and optional credential login
+- public MAI schedule pages on `mai.ru` as a public, no-login site
+
+An additional private exploratory context may be used for development or demo purposes:
+- `my.mai.ru` with session reuse and optional credential login
 
 The central claim is narrow on purpose: exact workflow reuse on the same site and within the same task family should reduce unnecessary exploration, loops, and time-to-completion without reducing task success.
 
@@ -17,7 +20,7 @@ The central claim is narrow on purpose: exact workflow reuse on the same site an
 - Analyze trajectories and synthesize an optimized workflow representation rather than storing only raw traces.
 - Reuse admitted memory on future runs through structured hint packets.
 - Compare baseline, optimized rerun, and fresh memory-assisted runs with stable metrics.
-- Support both a public and an authenticated site through one shared pipeline.
+- Support multiple site adapters through one shared pipeline, with public benchmarks as the default reproducible path.
 - Expose the system through a CLI-first interface that can later be orchestrated by an external agent shell.
 
 ## Non-Goals
@@ -64,10 +67,10 @@ Typical task inputs:
 Typical output:
 - structured result with chosen item, key restrictions, and availability-related details
 
-### my.mai.ru
+### Public MAI Schedule
 
 Primary task family:
-- Find the schedule for a given input and extract a structured schedule answer.
+- Find the schedule for a given input on the public MAI schedule pages and extract a structured schedule answer.
 
 Typical task inputs:
 - group, date, day, week, or similar schedule parameters
@@ -75,9 +78,16 @@ Typical task inputs:
 Typical output:
 - structured result with class time, subject, room, teacher, and date context
 
+Primary benchmark entrypoint:
+- `https://mai.ru/education/studies/schedule/groups.php`
+
+### my.mai.ru (Exploratory Only)
+
 Authentication modes:
 - session reuse as the default operator-friendly mode
 - credential login from environment/config as an optional full-run mode
+
+This context is explicitly non-blocking for external reproducibility and is not part of the core benchmark claim.
 
 ## Core Design Decisions
 
@@ -86,11 +96,17 @@ Authentication modes:
 - Analysis and optimization are hybrid:
   - Python computes deterministic features, metrics, and normalized artifacts.
   - LLM-based judging and optimization operate on a structured packet rather than raw logs alone.
+- Optimization is a single LLM pass with one structured response:
+  - `analysis`
+  - `optimized_workflow`
+  - `human_summary`
 - The external shell agent is an orchestrator adapter and not the owner of business logic.
 - Memory admission is strict: no optimized rerun, no memory.
 - The storage model is split:
   - raw artifacts on disk as JSON and related files
   - indexed entities and metrics in SQLite
+- Configuration is centralized in `config/project.yaml`, with secrets in `.env`.
+- The first-line README track tag for submission is `Track: C+D`.
 
 ## System Architecture
 
@@ -139,8 +155,8 @@ Responsibilities:
 - detect loops and retries with deterministic rules
 - compute metrics
 - run rule-based verification
-- run WebJudge-like LLM verification when deterministic checks are insufficient
-- assemble the analyzer packet
+- run a WebJudge-inspired LLM verification pass when deterministic checks are insufficient
+- assemble the optimization input packet
 
 ### 4. Memory Layer
 
@@ -187,7 +203,7 @@ The boundary between shared logic and site-specific logic is strict.
 - fingerprinting
 - loop and retry detection
 - verifier orchestration
-- analyzer and optimizer orchestration
+- optimization-pass orchestration
 - rerun with memory hints
 - comparison and admission
 - SQLite indexing
@@ -202,7 +218,7 @@ One optimization job follows this exact sequence:
 1. Receive `site`, `task_family`, `task_input`, and `run_mode`.
 2. Load the site adapter and runtime config.
 3. Prepare browser session state:
-   - public mode for `Recreation.gov`
+   - public mode for `Recreation.gov` and public MAI schedule pages
    - session reuse or credential login for `my.mai.ru`
 4. Run a baseline task through `browser-use`.
 5. Persist raw artifacts:
@@ -219,10 +235,11 @@ One optimization job follows this exact sequence:
    - `retry_count`
 8. Run verification:
    - first rule-based
-   - then WebJudge-like LLM outcome judgment if needed
-9. Send the structured packet to the analyzer/optimizer.
+   - then a WebJudge-inspired LLM outcome judgment if needed
+9. Send the structured packet to a single optimization pass.
 10. Receive:
-   - optimized workflow object
+   - structured `analysis`
+   - structured `optimized_workflow`
    - human-readable optimization summary
    - structured rerun hint packet
 11. Run the optimized rerun with the hint packet.
@@ -276,6 +293,27 @@ Run a suite of independent jobs for one or more sites with optional parallel exe
 Constraints:
 - each individual browser workflow stays sequential
 - only independent jobs are parallelized
+
+Jobs are independent only if they do not share mutable runtime state:
+- separate artifact directories
+- separate run identifiers
+- separate browser profiles or session state
+
+Authenticated jobs against the same account should run sequentially by default.
+
+## Agent Tool Surface
+
+The CLI is the stable tool contract for external shell agents.
+
+An external agent does not call internal Python functions directly. It invokes CLI commands through its shell or command-execution tool.
+
+Minimum tool surface:
+- `workflow-memory baseline --site ... --task-family ... --input ...`
+- `workflow-memory optimize --site ... --task-family ... --input ...`
+- `workflow-memory memory-run --site ... --task-family ... --input ...`
+- `workflow-memory eval-batch --suite ...`
+
+This is how the project satisfies the requirement that the final agent genuinely uses tools. The external agent uses the CLI as its tool interface, while the CLI delegates into the shared pipeline.
 
 ## Data Model
 
@@ -338,6 +376,32 @@ The memory entry is the reusable object. Raw traces remain attached for audit an
 
 ## Storage Strategy
 
+### Config And Secrets
+
+Project configuration lives in:
+- `config/project.yaml`
+
+Secrets live in:
+- `.env`
+
+`config/project.yaml` must define:
+- model names for verifier and optimization pass
+- artifact root paths
+- SQLite path
+- browser profile defaults
+- pinned runtime dependency versions
+- admission thresholds
+- retrieval scoring weights
+- parallelism defaults
+
+Default model choices for `v1`:
+- `judge_model: gpt-4.1-mini`
+- `optimize_model: gpt-4.1`
+
+These defaults are chosen for cost/performance balance and remain overridable in config. OpenAI documents describe GPT-4.1 mini as a smaller, faster GPT-4.1 model and GPT-4.1 as the smarter non-reasoning model in the same family.
+
+Runtime dependencies such as `browser-use` and Playwright must be pinned in the project dependency lockfile and mirrored in `config/project.yaml` or generated runtime metadata for reproducible evaluation.
+
 ### File-Based Artifacts
 
 Store raw execution artifacts on disk:
@@ -351,6 +415,17 @@ Why:
 - easier debugging
 - direct inspection during research
 - readable inputs for README, reflection, and screencast preparation
+
+Canonical artifact layout:
+- `artifacts/runs/<run_id>/trace.json`
+- `artifacts/runs/<run_id>/normalized.json`
+- `artifacts/runs/<run_id>/result.json`
+- `artifacts/runs/<run_id>/verifier.json`
+- `artifacts/runs/<run_id>/screenshots/`
+- `artifacts/optimizations/<run_id>/optimization.json`
+- `artifacts/optimizations/<run_id>/summary.md`
+- `artifacts/evals/<eval_id>/summary.json`
+- `artifacts/evals/<eval_id>/report.md`
 
 ### SQLite Index
 
@@ -367,6 +442,9 @@ Why:
 - reliable local storage
 - simple admission and reporting queries
 
+Canonical SQLite location:
+- `data/workflow_memory.sqlite`
+
 ## Page-State Fingerprinting And Loop Detection
 
 ### Page-State Representation
@@ -382,6 +460,13 @@ The fingerprint should favor:
 - important labels around the current interaction area
 
 It should avoid overfitting to noisy or highly variable page content.
+
+Matching semantics:
+- `same page state`: identical normalized URL path, identical title, identical fingerprint hash
+- `near-identical page state`: same normalized domain/path family and fingerprint similarity above a configurable threshold
+
+Default `near_identical_threshold`:
+- `0.80`
 
 ### Loop Detection
 
@@ -408,7 +493,7 @@ Examples:
 - schedule entries found for the chosen date
 - result card opened and required details captured
 
-### WebJudge-Like LLM Verification
+### WebJudge-Inspired LLM Verification
 
 Used when deterministic checks are incomplete or ambiguous.
 
@@ -420,11 +505,13 @@ Inputs may include:
 
 The LLM verifier is a second-layer outcome judge, not the source of process metrics.
 
+The project does not claim to fully reproduce the original WebJudge benchmark protocol. It borrows the high-level idea of LLM-as-judge over task context, action history, and selected visual or page-state evidence.
+
 ## Analysis And Optimization
 
-The analyzer/optimizer does not read raw browser history only. It consumes a structured packet prepared by Python.
+The optimization pass does not read raw browser history only. It consumes a structured packet prepared by Python.
 
-### Analyzer Packet Contents
+### Optimization Input Packet
 
 - task context
 - site and task family
@@ -435,9 +522,20 @@ The analyzer/optimizer does not read raw browser history only. It consumes a str
 - loop/retry annotations
 - optional screenshots or summaries
 
-### Optimizer Outputs
+### Single Optimization Pass Contract
 
-The optimizer emits two views.
+The pipeline issues one LLM call for optimization. That call returns three logical outputs in one structured response:
+- `analysis`
+- `optimized_workflow`
+- `human_summary`
+
+#### Analysis
+
+Contains:
+- inefficiencies in baseline behavior
+- identified wasted exploration or loops
+- reasoning for the proposed optimized path
+- known uncertainty or brittleness points
 
 #### Machine-Readable Workflow Object
 
@@ -473,12 +571,16 @@ Candidates must match:
 
 ### Step 2: Lightweight Scoring
 
-Within the filtered set, candidates are scored by similarity of:
-- relevant input fields
-- task signature features
-- optional adapter-provided contextual cues
+Within the filtered set, candidates are scored by a weighted field-by-field similarity function:
+- exact match for categorical fields such as `task_family` subtypes
+- set overlap or Jaccard similarity for filter collections
+- bucketed overlap or tolerance scoring for numeric and date-like fields
+- normalized string similarity for free-text query fields
+- optional adapter-provided contextual cues with explicit weights
 
 `v1` does not depend on embeddings. The retrieval method should stay easy to inspect and explain.
+
+If a field is marked critical by the adapter, a mismatch on that field may zero out the candidate regardless of the aggregate score.
 
 ## Hint Packet Design
 
@@ -506,9 +608,33 @@ Admission criteria:
   - `loop/retry_count`
 
 Initial `v1` threshold:
-- approximately 10% improvement on at least one key metric with no success regression
+- 10% improvement on at least one key metric with no success regression
 
-The exact threshold value should remain configurable, but the default behavior must be conservative to avoid storing low-quality memory.
+The exact threshold value is configured in `config/project.yaml`.
+
+Default keys:
+- `admission.min_relative_improvement: 0.10`
+- `admission.require_no_success_regression: true`
+
+The default behavior must stay conservative to avoid storing low-quality memory.
+
+## Error Handling And Partial Runs
+
+Every run must persist an artifact directory even when execution fails mid-run.
+
+Canonical run statuses:
+- `succeeded`
+- `failed_execution`
+- `failed_verification`
+- `failed_optimization`
+- `failed_rerun`
+
+Failure metadata must include:
+- `failure_stage`
+- `error_summary`
+- `partial_artifacts_written`
+
+This is required for later failure analysis, especially on brittle or authenticated flows.
 
 ## Evaluation Design
 
@@ -557,7 +683,7 @@ Must cover:
 
 Must cover:
 - one public-site scenario on `Recreation.gov`
-- one authenticated scenario on `my.mai.ru`
+- one public MAI schedule scenario
 
 Smoke tests are allowed to be narrower than the evaluation suite but must prove end-to-end viability.
 
@@ -584,6 +710,8 @@ Implementation should proceed in this order:
 
 This order is intentional. It preserves debuggability and ensures the memory layer is built on observable execution rather than on speculative abstractions.
 
+Step 8 specifically means exposing the CLI as a stable tool surface for external shell agents. It does not move execution logic out of the Python core.
+
 ## Future Development
 
 Possible post-`v1` extensions:
@@ -593,6 +721,7 @@ Possible post-`v1` extensions:
 - multiple orchestrator adapters
 - broader benchmark coverage
 - cross-site generalization experiments
+- private authenticated exploratory adapters such as `my.mai.ru`
 
 None of these should weaken or delay the `v1` claim.
 
@@ -610,6 +739,8 @@ These are not embarrassments. They are required parts of the research story and 
 ## Deliverables Alignment
 
 The architecture must support the test-task deliverables directly.
+
+- `README` first line: `Track: C+D`
 
 - `README`: runnable entrypoint, architecture summary, benchmark setup, and results
 - `REFLECTION.md`: failure cases, tradeoffs, and next steps
