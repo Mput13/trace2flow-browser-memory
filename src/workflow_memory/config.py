@@ -26,6 +26,8 @@ class ProjectConfig(BaseModel):
     sqlite_path: str
     artifacts_root: str
     near_identical_threshold: float
+    browser_use_version: str
+    playwright_browser: str
     admission: AdmissionConfig
     retrieval: RetrievalConfig
     parallelism: ParallelismConfig
