@@ -31,4 +31,18 @@ def test_run_repository_and_artifact_store_persist_run(tmp_path: Path) -> None:
 
     fetched = repo.get_run("run-001")
     assert fetched["site"] == "recreation_gov"
+    assert fetched["run_mode"] == "baseline"
+    assert fetched["task_input"] == {"query": "Yosemite"}
+    assert fetched["metrics"] == {"action_count": 12}
     assert Path(paths["trace"]).exists()
+    assert fetched["normalized_path"] == paths["normalized"]
+    assert fetched["result_path"] == paths["result"]
+
+
+def test_run_repository_get_run_returns_none_for_missing_run(tmp_path: Path) -> None:
+    db_path = tmp_path / "workflow_memory.sqlite"
+    initialize_db(db_path)
+
+    repo = RunRepository(db_path)
+
+    assert repo.get_run("missing-run") is None

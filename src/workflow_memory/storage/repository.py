@@ -34,16 +34,37 @@ class RunRepository:
             )
             connection.commit()
 
-    def get_run(self, run_id: str) -> dict[str, Any]:
+    def get_run(self, run_id: str) -> dict[str, Any] | None:
         with sqlite3.connect(self.db_path) as connection:
             row = connection.execute(
-                "SELECT run_id, site, task_family, status, trace_path FROM runs WHERE run_id = ?",
+                """
+                SELECT
+                  run_id,
+                  site,
+                  task_family,
+                  run_mode,
+                  status,
+                  task_input_json,
+                  metrics_json,
+                  trace_path,
+                  normalized_path,
+                  result_path
+                FROM runs
+                WHERE run_id = ?
+                """,
                 (run_id,),
             ).fetchone()
+        if row is None:
+            return None
         return {
             "run_id": row[0],
             "site": row[1],
             "task_family": row[2],
-            "status": row[3],
-            "trace_path": row[4],
+            "run_mode": row[3],
+            "status": row[4],
+            "task_input": json.loads(row[5]),
+            "metrics": json.loads(row[6]),
+            "trace_path": row[7],
+            "normalized_path": row[8],
+            "result_path": row[9],
         }
