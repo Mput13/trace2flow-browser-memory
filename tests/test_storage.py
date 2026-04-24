@@ -115,3 +115,32 @@ def test_duplicate_insert_keeps_existing_artifacts(tmp_path: Path) -> None:
     assert json.loads(Path(original_paths["trace"]).read_text(encoding="utf-8")) == {
         "trace": ["original"]
     }
+
+
+def test_failed_artifact_write_rolls_back_run_directory(tmp_path: Path) -> None:
+    artifacts_root = tmp_path / "artifacts"
+    store = ArtifactStore(artifacts_root)
+    run = RunArtifact(
+        run_id="run-004",
+        site="recreation_gov",
+        task_family="campground_search",
+        run_mode="baseline",
+        status="failed",
+        task_input={"query": "Yosemite"},
+        metrics={},
+    )
+    run_dir = artifacts_root / "runs" / run.run_id
+
+    try:
+        store.write_run_artifacts(
+            run,
+            {"trace": []},
+            {"normalized": {1, 2, 3}},
+            {"result": {}},
+        )
+    except TypeError:
+        pass
+    else:
+        raise AssertionError("expected artifact write to fail")
+
+    assert not run_dir.exists()
