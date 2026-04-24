@@ -11,3 +11,12 @@ def test_cli_shows_expected_commands() -> None:
     assert "optimize" in result.stdout
     assert "memory-run" in result.stdout
     assert "eval-batch" in result.stdout
+
+
+def test_cli_commands_fail_until_implemented() -> None:
+    runner = CliRunner()
+
+    for command_name in ["baseline", "optimize", "memory-run", "eval-batch"]:
+        result = runner.invoke(app, [command_name])
+        assert result.exit_code != 0
+        assert "not implemented yet" in result.stdout.lower()
