@@ -82,3 +82,41 @@ def test_insert_run_cleans_up_artifacts_when_db_insert_fails(tmp_path: Path) -> 
         raise AssertionError("expected sqlite insert to fail")
 
     assert not run_dir.exists()
+
+
+def test_duplicate_insert_keeps_existing_artifacts(tmp_path: Path) -> None:
+    db_path = tmp_path / "workflow_memory.sqlite"
+    artifacts_root = tmp_path / "artifacts"
+    store = ArtifactStore(artifacts_root)
+    repo = RunRepository(db_path)
+
+    original_run = RunArtifact(
+        run_id="run-003",
+        site="recreation_gov",
+        task_family="campground_search",
+        run_mode="baseline",
+        status="succeeded",
+        task_input={"query": "Yosemite"},
+        metrics={},
+    )
+    original_paths = store.write_run_artifacts(
+        original_run, {"trace": ["original"]}, {"normalized": []}, {"result": {}}
+    )
+    original_run_dir = Path(original_paths["trace"]).parent
+    repo.insert_run(original_run, original_paths)
+
+    duplicate_paths = store.write_run_artifacts(
+        original_run, {"trace": ["duplicate"]}, {"normalized": []}, {"result": {}}
+    )
+
+    try:
+        repo.insert_run(original_run, duplicate_paths)
+    except sqlite3.IntegrityError:
+        pass
+    else:
+        raise AssertionError("expected duplicate sqlite insert to fail")
+
+    assert original_run_dir.exists()
+    assert json.loads(Path(original_paths["trace"]).read_text(encoding="utf-8")) == {
+        "trace": ["duplicate"]
+    }

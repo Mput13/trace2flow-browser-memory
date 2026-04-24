@@ -36,6 +36,8 @@ class RunRepository:
                     ),
                 )
                 connection.commit()
+        except sqlite3.IntegrityError:
+            raise
         except sqlite3.Error:
             run_dir = Path(paths["trace"]).parent
             shutil.rmtree(run_dir, ignore_errors=True)
