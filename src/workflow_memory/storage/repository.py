@@ -1,6 +1,7 @@
 import json
 import sqlite3
 from pathlib import Path
+import shutil
 
 from workflow_memory.db import initialize_db
 from workflow_memory.models import ArtifactPaths, PersistedRunRecord, RunArtifact
@@ -12,28 +13,33 @@ class RunRepository:
         initialize_db(self.db_path)
 
     def insert_run(self, run: RunArtifact, paths: ArtifactPaths) -> None:
-        with sqlite3.connect(self.db_path) as connection:
-            connection.execute(
-                """
-                INSERT INTO runs (
-                  run_id, site, task_family, run_mode, status,
-                  task_input_json, metrics_json, trace_path, normalized_path, result_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    run.run_id,
-                    run.site,
-                    run.task_family,
-                    run.run_mode,
-                    run.status,
-                    json.dumps(run.task_input),
-                    json.dumps(run.metrics),
-                    paths["trace"],
-                    paths["normalized"],
-                    paths["result"],
-                ),
-            )
-            connection.commit()
+        try:
+            with sqlite3.connect(self.db_path) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO runs (
+                      run_id, site, task_family, run_mode, status,
+                      task_input_json, metrics_json, trace_path, normalized_path, result_path
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        run.run_id,
+                        run.site,
+                        run.task_family,
+                        run.run_mode,
+                        run.status,
+                        json.dumps(run.task_input),
+                        json.dumps(run.metrics),
+                        paths["trace"],
+                        paths["normalized"],
+                        paths["result"],
+                    ),
+                )
+                connection.commit()
+        except sqlite3.Error:
+            run_dir = Path(paths["trace"]).parent
+            shutil.rmtree(run_dir, ignore_errors=True)
+            raise
 
     def get_run(self, run_id: str) -> PersistedRunRecord | None:
         with sqlite3.connect(self.db_path) as connection:
