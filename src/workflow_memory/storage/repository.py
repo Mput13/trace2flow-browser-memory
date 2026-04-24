@@ -1,16 +1,17 @@
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any
 
-from workflow_memory.models import RunArtifact
+from workflow_memory.db import initialize_db
+from workflow_memory.models import ArtifactPaths, PersistedRunRecord, RunArtifact
 
 
 class RunRepository:
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
+        initialize_db(self.db_path)
 
-    def insert_run(self, run: RunArtifact, paths: dict[str, str]) -> None:
+    def insert_run(self, run: RunArtifact, paths: ArtifactPaths) -> None:
         with sqlite3.connect(self.db_path) as connection:
             connection.execute(
                 """
@@ -34,8 +35,9 @@ class RunRepository:
             )
             connection.commit()
 
-    def get_run(self, run_id: str) -> dict[str, Any] | None:
+    def get_run(self, run_id: str) -> PersistedRunRecord | None:
         with sqlite3.connect(self.db_path) as connection:
+            connection.row_factory = sqlite3.Row
             row = connection.execute(
                 """
                 SELECT
@@ -56,15 +58,15 @@ class RunRepository:
             ).fetchone()
         if row is None:
             return None
-        return {
-            "run_id": row[0],
-            "site": row[1],
-            "task_family": row[2],
-            "run_mode": row[3],
-            "status": row[4],
-            "task_input": json.loads(row[5]),
-            "metrics": json.loads(row[6]),
-            "trace_path": row[7],
-            "normalized_path": row[8],
-            "result_path": row[9],
-        }
+        return PersistedRunRecord(
+            run_id=row["run_id"],
+            site=row["site"],
+            task_family=row["task_family"],
+            run_mode=row["run_mode"],
+            status=row["status"],
+            task_input=json.loads(row["task_input_json"]),
+            metrics=json.loads(row["metrics_json"]),
+            trace_path=row["trace_path"],
+            normalized_path=row["normalized_path"],
+            result_path=row["result_path"],
+        )

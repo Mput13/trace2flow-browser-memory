@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from workflow_memory.db import initialize_db
-from workflow_memory.models import RunArtifact
+from workflow_memory.models import PersistedRunRecord, RunArtifact
 from workflow_memory.storage.artifacts import ArtifactStore
 from workflow_memory.storage.repository import RunRepository
 
@@ -9,7 +8,6 @@ from workflow_memory.storage.repository import RunRepository
 def test_run_repository_and_artifact_store_persist_run(tmp_path: Path) -> None:
     db_path = tmp_path / "workflow_memory.sqlite"
     artifacts_root = tmp_path / "artifacts"
-    initialize_db(db_path)
 
     store = ArtifactStore(artifacts_root)
     repo = RunRepository(db_path)
@@ -30,6 +28,9 @@ def test_run_repository_and_artifact_store_persist_run(tmp_path: Path) -> None:
     repo.insert_run(run, paths)
 
     fetched = repo.get_run("run-001")
+    assert fetched is not None
+    persisted: PersistedRunRecord = fetched
+    assert persisted["run_id"] == "run-001"
     assert fetched["site"] == "recreation_gov"
     assert fetched["run_mode"] == "baseline"
     assert fetched["task_input"] == {"query": "Yosemite"}
@@ -41,8 +42,6 @@ def test_run_repository_and_artifact_store_persist_run(tmp_path: Path) -> None:
 
 def test_run_repository_get_run_returns_none_for_missing_run(tmp_path: Path) -> None:
     db_path = tmp_path / "workflow_memory.sqlite"
-    initialize_db(db_path)
-
     repo = RunRepository(db_path)
 
     assert repo.get_run("missing-run") is None
