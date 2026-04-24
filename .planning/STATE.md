@@ -9,9 +9,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Current Status
 
-- Project initialized from research handoff and test-task brief
-- Phase 1 context captured in `.planning/phases/01-baseline-harness/01-CONTEXT.md`
-- Next recommended command: `$gsd-plan-phase 1 --auto`
+- Phase 1 in progress: plan 01-01 complete, plans 01-02 and 01-03 pending
+- Phase 2 partially started out-of-order: plan 02-01 (storage layer) complete
+- Next: plan and implement 01-02 (baseline execution entrypoint)
 
 **Last activity:** 2026-04-25 - Completed quick task 260425-24c: boundary fix: remove Path inference from RunRepository insert_run
 
