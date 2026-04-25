@@ -1,0 +1,15 @@
+site: books.toscrape.com
+task_family: book_search
+cases:
+  - case_id: books-01
+    task: "Go to http://books.toscrape.com and find all books in the Mystery category. List the titles and prices."
+  - case_id: books-02
+    task: "Go to http://books.toscrape.com and find all books in the Science Fiction category. How many are there and what is the most expensive one?"
+  - case_id: books-03
+    task: "Go to http://books.toscrape.com and find all books in the Travel category. List titles."
+  - case_id: books-04
+    task: "Go to http://books.toscrape.com and find all books in the Fantasy category that cost less than £10."
+  - case_id: books-05
+    task: "Go to http://books.toscrape.com and find all books in the Romance category. How many books are there?"
+  - case_id: books-06
+    task: "Go to http://books.toscrape.com and find all books in the History category. List the first 5 titles."

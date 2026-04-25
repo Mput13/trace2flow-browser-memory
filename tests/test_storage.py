@@ -27,7 +27,7 @@ def test_run_repository_and_artifact_store_persist_run(tmp_path: Path) -> None:
     paths = store.write_run_artifacts(
         run, {"trace": []}, {"normalized": []}, {"result": {}}
     )
-    repo.insert_run(run, paths)
+    repo.insert_run(run, paths, artifact_dir=Path(paths["trace"]).parent)
 
     fetched = repo.get_run("run-001")
     assert fetched is not None
@@ -75,7 +75,7 @@ def test_insert_run_cleans_up_artifacts_when_db_insert_fails(tmp_path: Path) -> 
         connection.commit()
 
     try:
-        repo.insert_run(run, paths)
+        repo.insert_run(run, paths, artifact_dir=run_dir)
     except sqlite3.OperationalError:
         pass
     else:

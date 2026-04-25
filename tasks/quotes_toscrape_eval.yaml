@@ -1,0 +1,15 @@
+site: quotes.toscrape.com
+task_family: quote_search
+cases:
+  - case_id: quotes-01
+    task: "Go to http://quotes.toscrape.com and find all quotes by Albert Einstein."
+  - case_id: quotes-02
+    task: "Go to http://quotes.toscrape.com and find all quotes tagged 'love'."
+  - case_id: quotes-03
+    task: "Go to http://quotes.toscrape.com and find all quotes by Mark Twain."
+  - case_id: quotes-04
+    task: "Go to http://quotes.toscrape.com and find all quotes tagged 'inspirational'."
+  - case_id: quotes-05
+    task: "Go to http://quotes.toscrape.com and find all quotes by J.K. Rowling."
+  - case_id: quotes-06
+    task: "Go to http://quotes.toscrape.com and find all quotes tagged 'humor'. List them all."

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import yaml
 from pydantic import BaseModel, ConfigDict
@@ -14,10 +15,13 @@ class AdmissionConfig(StrictModel):
 
 
 class RetrievalConfig(StrictModel):
-    categorical_weight: float
-    set_weight: float
-    numeric_weight: float
-    text_weight: float
+    # New interface: fuzzy_threshold for natural-language task retrieval
+    fuzzy_threshold: Optional[float] = None
+    # Legacy weighted-field retrieval (kept for backward compat)
+    categorical_weight: Optional[float] = None
+    set_weight: Optional[float] = None
+    numeric_weight: Optional[float] = None
+    text_weight: Optional[float] = None
 
 
 class ParallelismConfig(StrictModel):
@@ -25,13 +29,21 @@ class ParallelismConfig(StrictModel):
 
 
 class ProjectConfig(StrictModel):
+    # LLM provider config
+    llm_provider: str = "openai"
+    llm_base_url: Optional[str] = None
+    llm_api_key_env: str = "OPENAI_API_KEY"
+
+    # Model names
     judge_model: str
     optimize_model: str
+
+    # Storage
     sqlite_path: str
     artifacts_root: str
     near_identical_threshold: float
-    browser_use_version: str
-    playwright_browser: str
+
+    # Sub-configs
     admission: AdmissionConfig
     retrieval: RetrievalConfig
     parallelism: ParallelismConfig

@@ -21,4 +21,34 @@ def initialize_db(path: Path) -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memories (
+              memory_id TEXT PRIMARY KEY,
+              site TEXT NOT NULL,
+              task TEXT NOT NULL,
+              task_family TEXT,
+              hint_packet_json TEXT NOT NULL,
+              source_run_id TEXT NOT NULL,
+              admitted_at TEXT NOT NULL,
+              action_count_baseline INTEGER,
+              action_count_rerun INTEGER,
+              improvement_pct REAL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS site_pages (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              site TEXT NOT NULL,
+              url_pattern TEXT NOT NULL,
+              description TEXT NOT NULL,
+              params_json TEXT NOT NULL DEFAULT '{}',
+              last_seen TEXT NOT NULL,
+              confidence REAL NOT NULL DEFAULT 1.0,
+              UNIQUE(site, url_pattern)
+            )
+            """
+        )
         connection.commit()

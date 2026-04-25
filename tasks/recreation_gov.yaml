@@ -1,0 +1,7 @@
+site: recreation_gov
+task_family: campground_search
+cases:
+  - case_id: rec-001
+    task: "Find available tent campsites near Yosemite for two nights in late June 2026"
+  - case_id: rec-002
+    task: "Search for campgrounds near Yellowstone available for a family of four in July 2026"

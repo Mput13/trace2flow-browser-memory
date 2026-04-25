@@ -1,1 +1,25 @@
 .worktrees/
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Runtime artifacts (large, reproducible)
+artifacts/
+data/
+
+# Internal planning and Claude config
+.planning/
+.claude/
+
+# Misc
+browser_workflow_memory_handoff_v2.md
+test_task_options.md
+task_task_options.md

@@ -1,0 +1,19 @@
+site: mai.ru
+task_family: schedule_lookup
+cases:
+  - case_id: mai-s01
+    task: "Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-105БВ-25 (8 институт, 1 курс, базовое высшее) на понедельник 28.04"
+  - case_id: mai-s02
+    task: "Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-105БВ-25 (8 институт, 1 курс, базовое высшее) на среду 30.04"
+  - case_id: mai-s03
+    task: "Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-106БВ-25 (8 институт, 1 курс, базовое высшее) на понедельник 28.04"
+  - case_id: mai-s04
+    task: "Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-107БВ-25 (8 институт, 1 курс, базовое высшее) на вторник 29.04"
+  - case_id: mai-s05
+    task: "Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-108БВ-25 (8 институт, 1 курс, базовое высшее) на среду 30.04"
+  - case_id: mai-s06
+    task: "Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-205БВ-25 (8 институт, 2 курс, базовое высшее) на понедельник 28.04"
+  - case_id: mai-s07
+    task: "Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-105БВ-25 (8 институт, 1 курс, базовое высшее) на пятницу 02.05"
+  - case_id: mai-s08
+    task: "Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М3О-101БВ-25 (3 институт, 1 курс, базовое высшее) на вторник 29.04"
