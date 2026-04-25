@@ -1,0 +1,18 @@
+{
+  "site": "kinostar86.ru",
+  "note": "Частичный прогон — 9 из 10 кейсов, процесс завершён до kino-10",
+  "total_cases": 9,
+  "cases_with_memory_run": 5,
+  "avg_reduction_pct": 9.8,
+  "cases": [
+    {"case_id":"kino-01","task_desc":"Петрошка 27.04, ранний сеанс + свободные места","baseline_actions":25,"baseline_status":"failed_verification","memory_actions":25,"memory_status":"baseline_fallback","action_delta":null,"reduction_pct":null,"note":"iframe карты мест cross-origin — верификация провалилась"},
+    {"case_id":"kino-02","task_desc":"Какие фильмы сейчас идут","baseline_actions":5,"baseline_status":"succeeded","memory_actions":4,"memory_status":"succeeded","action_delta":1,"reduction_pct":20.0},
+    {"case_id":"kino-03","task_desc":"Детские фильмы 0+/6+","baseline_actions":25,"baseline_status":"succeeded","memory_actions":16,"memory_status":"succeeded","action_delta":9,"reduction_pct":36.0},
+    {"case_id":"kino-04","task_desc":"Стоимость билетов Супер Марио","baseline_actions":3,"baseline_status":"succeeded","memory_actions":6,"memory_status":"succeeded","action_delta":-3,"reduction_pct":-100.0,"note":"Регрессия: baseline нашёл за 3 шага, memory добавил лишние переходы"},
+    {"case_id":"kino-05","task_desc":"Свободные места Ангелы Ладоги вечером","baseline_actions":25,"baseline_status":"failed_verification","memory_actions":25,"memory_status":"failed_verification","action_delta":null,"reduction_pct":null,"note":"cross-origin iframe"},
+    {"case_id":"kino-06","task_desc":"Скоро в кино","baseline_actions":10,"baseline_status":"succeeded","memory_actions":4,"memory_status":"succeeded","action_delta":6,"reduction_pct":60.0},
+    {"case_id":"kino-07","task_desc":"Контакты","baseline_actions":3,"baseline_status":"succeeded","memory_actions":2,"memory_status":"succeeded","action_delta":1,"reduction_pct":33.3},
+    {"case_id":"kino-08","task_desc":"Сеансы по Пушкинской карте","baseline_actions":25,"baseline_status":"failed_verification","memory_actions":25,"memory_status":"baseline_fallback","action_delta":null,"reduction_pct":null,"note":"Baseline провалился, memory fallback отработал без памяти"},
+    {"case_id":"kino-09","task_desc":"Расписание 28 апреля","baseline_actions":25,"baseline_status":"succeeded","memory_actions":null,"memory_status":"not_run","action_delta":null,"reduction_pct":null,"note":"Memory-run не запустился — процесс остановлен"}
+  ]
+}

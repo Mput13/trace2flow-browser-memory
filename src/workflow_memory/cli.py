@@ -45,10 +45,13 @@ def run(
     ),
     max_steps: int = typer.Option(25, "--max-steps", help="Agent step budget"),
     output_json: bool = typer.Option(False, "--output", help="Output as JSON"),
+    headless: bool = typer.Option(True, "--headless/--no-headless", help="Run browser headless (default) or visible"),
 ) -> None:
     """Run a browser task with a natural-language task string."""
+    from workflow_memory.runtime.browser_runner import BrowserRunner
     cfg = load_config(config_path)
-    result = run_task(task=task, config=cfg, site=site, max_steps=max_steps)
+    runner = BrowserRunner.from_config(cfg, headless=headless)
+    result = run_task(task=task, config=cfg, site=site, max_steps=max_steps, runner=runner)
     _output_result(result, output_json)
 
 
@@ -210,13 +213,16 @@ def memory_run(
     ),
     max_steps: int = typer.Option(25, "--max-steps", help="Agent step budget"),
     output_json: bool = typer.Option(False, "--output", help="Output as JSON"),
+    headless: bool = typer.Option(True, "--headless/--no-headless", help="Run browser headless (default) or visible"),
 ) -> None:
     """Run a task with admitted memory hints."""
+    from workflow_memory.runtime.browser_runner import BrowserRunner
     if task is None:
         typer.echo("Error: --task is required.", err=True)
         raise typer.Exit(code=2)
     cfg = load_config(config_path)
-    result = run_memory_task(task=task, config=cfg, site=site, max_steps=max_steps)
+    runner = BrowserRunner.from_config(cfg, headless=headless)
+    result = run_memory_task(task=task, config=cfg, site=site, max_steps=max_steps, runner=runner)
     _output_result(result, output_json)
     if not output_json:
         used = result.get("memory_used", False)
