@@ -29,7 +29,7 @@ The project starts with a narrow browser-task harness and baseline agent executi
 
 Plans:
 - [x] 01-01: Select runtime stack, target site, and benchmark task family
-- [ ] 01-02: Implement baseline execution entrypoint and tracing
+- [x] 01-02: Implement baseline execution entrypoint and tracing
 - [ ] 01-03: Validate reproducibility and sample runs
 
 ### Phase 2: Workflow Memory Layer

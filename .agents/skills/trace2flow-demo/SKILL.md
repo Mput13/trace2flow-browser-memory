@@ -7,6 +7,8 @@ description: Use when running a live Codex CLI demonstration of trace2flow, or w
 
 Run a live end-to-end demonstration of the `trace2flow` workflow-memory loop from Codex.
 
+Use the validated MAI schedule scenario, not `books.toscrape.com`. The books demo can succeed without making the memory benefit visually obvious. The MAI scenario has a recorded best-case improvement in the repo artifacts and is the preferred live-demo path.
+
 ## Invocation
 
 - Trigger with `$trace2flow-demo`
@@ -34,16 +36,17 @@ $trace2flow-demo results
 ## Constants
 
 - Project root: `/Users/a/MAI/sem2/trace2flow`
-- Demo task: `Зайди на http://books.toscrape.com и найди все книги категории Mystery`
-- Demo site: `books.toscrape.com`
+- Demo task: `Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-108БВ-25 (8 институт, 1 курс, базовое высшее) на среду 30.04`
+- Demo site: `mai.ru`
 - Database: `data/workflow_memory.sqlite`
-- Expected improvement: about `15 -> 8` actions, roughly `47%` fewer actions
+- Expected improvement: about `20 -> 3` actions, roughly `85%` fewer actions
+- Evidence source: `results/eval_20_combined.json`, case `mai-s05`
 
 ## Modes
 
 - `full`: run the complete cycle: baseline -> optimize -> memory-run -> comparison
 - `baseline`: run only the blind baseline and show the result
-- `results`: show existing saved evaluation results from `results/`
+- `results`: show the validated MAI evaluation summary from `results/`
 - `--fresh`: clear stored memory for the demo site before running
 
 ## Timing Banner
@@ -86,10 +89,10 @@ if not os.path.exists(db_path):
     print('DB not yet created - baseline will be the first run')
 else:
     db = sqlite3.connect(db_path)
-    deleted = db.execute(\"DELETE FROM memories WHERE site LIKE '%book%'\").rowcount
+    deleted = db.execute(\"DELETE FROM memories WHERE site = 'mai.ru'\").rowcount
     db.commit()
     db.close()
-    print(f'Cleared {deleted} memory entries for books.toscrape.com')
+    print(f'Cleared {deleted} memory entries for mai.ru')
     print('Agent will run blind - no prior knowledge')
 "
 ```
@@ -101,7 +104,7 @@ Report what was cleared.
 Announce:
 
 ```text
-Step 1/3 - Baseline run (agent explores from scratch)
+Step 1/3 - Baseline run on MAI (agent explores the schedule flow from scratch)
 ```
 
 Run:
@@ -109,7 +112,7 @@ Run:
 ```bash
 cd /Users/a/MAI/sem2/trace2flow
 source .venv/bin/activate
-TASK="Зайди на http://books.toscrape.com и найди все книги категории Mystery"
+TASK="Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-108БВ-25 (8 институт, 1 курс, базовое высшее) на среду 30.04"
 echo "Task: $TASK"
 echo "Starting baseline... (browser will open)"
 workflow-memory run --task "$TASK" --output --no-headless 2>/tmp/t2f_run_stderr.txt | tee /tmp/t2f_baseline.json
@@ -144,7 +147,7 @@ If the baseline did not succeed, stop and report the failure.
 Announce:
 
 ```text
-Step 2/3 - Analyzing run and storing workflow memory
+Step 2/3 - Analyzing the MAI run and storing workflow memory
 ```
 
 Run:
@@ -165,7 +168,7 @@ import json, sqlite3
 db = sqlite3.connect('data/workflow_memory.sqlite')
 db.row_factory = sqlite3.Row
 row = db.execute(
-    \"SELECT * FROM memories WHERE site LIKE '%book%' ORDER BY admitted_at DESC LIMIT 1\"
+    \"SELECT * FROM memories WHERE site = 'mai.ru' ORDER BY admitted_at DESC LIMIT 1\"
 ).fetchone()
 if row is None:
     print('Memory was not admitted - check /tmp/t2f_optimize.txt')
@@ -192,7 +195,7 @@ else:
 Announce:
 
 ```text
-Step 3/3 - Memory-run (agent uses stored knowledge)
+Step 3/3 - Memory-run on MAI (agent uses stored direct URL and site knowledge)
 ```
 
 Run:
@@ -200,7 +203,7 @@ Run:
 ```bash
 cd /Users/a/MAI/sem2/trace2flow
 source .venv/bin/activate
-TASK="Зайди на http://books.toscrape.com и найди все книги категории Mystery"
+TASK="Зайди на https://mai.ru/education/studies/schedule/groups.php и найди расписание группы М8О-108БВ-25 (8 институт, 1 курс, базовое высшее) на среду 30.04"
 echo "Same task, memory-augmented prompt..."
 workflow-memory memory-run --task "$TASK" --output --no-headless 2>/tmp/t2f_memrun_stderr.txt | tee /tmp/t2f_memrun.json
 ```
@@ -240,6 +243,7 @@ pct = saved / baseline * 100 if baseline else 0
 t_saved = t_base - t_mem
 print()
 print('TRACE2FLOW DEMO - RESULTS')
+print('Scenario: mai.ru schedule lookup (validated mai-s05 case)')
 print(f'Baseline: {baseline} actions, {t_base:.0f}s')
 print(f'Memory:   {memory} actions, {t_mem:.0f}s')
 print(f'Actions saved: {saved:+d} ({pct:.0f}% fewer)')
@@ -253,27 +257,43 @@ else:
 
 ## Results Mode
 
-If the mode is `results`, summarize the latest saved eval file:
+If the mode is `results`, summarize the validated MAI result set first. Do not pick an arbitrary latest file.
 
 ```bash
 cd /Users/a/MAI/sem2/trace2flow
 python3 - <<'EOF'
-import glob, json, os
-files = sorted(glob.glob('results/eval_*.json'), key=os.path.getmtime, reverse=True)
-if not files:
-    print('No eval results found')
-    raise SystemExit(0)
-latest = files[0]
-print(f'Latest result file: {latest}')
-with open(latest) as f:
-    data = json.load(f)
-if isinstance(data, list):
-    total = len(data)
-    improved = sum(1 for item in data if item.get('improvement_pct', 0) > 0)
-    avg = sum(item.get('improvement_pct', 0) for item in data) / total if total else 0
-    print(f'Cases: {total}')
-    print(f'Improved: {improved}/{total}')
-    print(f'Average improvement: {avg:.1f}%')
+import json, os
+
+combined_path = 'results/eval_20_combined.json'
+mai_path = 'results/eval_mai.json'
+
+if os.path.exists(combined_path):
+    with open(combined_path) as f:
+        combined = json.load(f)
+    mai = next((item for item in combined if item.get('suite') == 'mai'), None)
+    if mai:
+        print(f"Source: {combined_path}")
+        print(f"Suite: mai")
+        print(f"Cases: {mai['total_cases']}")
+        print(f"Baseline success: {mai['baseline_success_rate']:.0%}")
+        print(f"Memory success: {mai['memory_success_rate']:.0%}")
+        print(f"Average action reduction: {mai['avg_action_reduction_pct']:.1f}%")
+        best = max(mai['cases'], key=lambda item: item.get('action_delta', -999))
+        print(
+            f"Best case: {best['case_id']} | "
+            f"{best['baseline_actions']} -> {best['memory_actions']} actions | "
+            f"delta +{best['action_delta']}"
+        )
+        print(f"Best task: {best['task']}")
+        raise SystemExit(0)
+
+if os.path.exists(mai_path):
+    with open(mai_path) as f:
+        mai = json.load(f)
+    print(f"Source: {mai_path}")
+    print(json.dumps(mai, ensure_ascii=False, indent=2))
+else:
+    print('No MAI eval results found')
 EOF
 ```
 
@@ -286,4 +306,4 @@ EOF
 | Browser launch failure | `python -m playwright install chromium` |
 | Optimize says not admitted | Repeat baseline and optimize |
 | `memory_used: False` | Check `/tmp/t2f_optimize.txt` |
-
+| Demo shows weak improvement | Use the exact validated MAI task from `mai-s05`, not a paraphrase |

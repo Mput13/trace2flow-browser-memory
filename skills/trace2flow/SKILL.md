@@ -5,53 +5,44 @@ description: Browser Workflow Memory (Trace2Flow). Use this skill to solve repet
 
 # Trace2Flow (Browser Workflow Memory)
 
-Trace2Flow is a research prototype that adds a memory layer on top of browser-use. It allows agents to perform repetitive browser tasks on the same website faster by remembering the navigation path and reusing it.
+Trace2Flow adds a memory layer on top of browser-use. It allows agents to perform repetitive browser tasks faster by remembering the navigation path.
 
-## Quick Start
+## Core Cycle for Professional Use
 
-The core commands follow this cycle:
-1. **`run`** (baseline): The agent solves a task from scratch.
-2. **`optimize`**: Analyzes the baseline run and extracts "hints" (memories).
-3. **`memory-run`**: Solves the task with memory hints, significantly reducing steps.
+Always use the project virtualenv: `/Users/a/MAI/sem2/trace2flow/.venv/bin/python3`.
+Project Root: `/Users/a/MAI/sem2/trace2flow`
 
-## Essential Commands
-
-Always run commands from the project root: `/Users/a/MAI/sem2/trace2flow`.
-Use the absolute path to the virtualenv python: `/Users/a/MAI/sem2/trace2flow/.venv/bin/python3`.
-
-### 1. Execute a Baseline Task
-Use this when you haven't seen a site before or want to establish a new baseline.
+### 1. Execute a Task (Smart Mode)
+Try running with memory first. If memory exists, it will be used automatically. If not, it falls back to common navigation.
 ```bash
-/Users/a/MAI/sem2/trace2flow/.venv/bin/python3 -m workflow_memory.cli run --task "Your browser task here" --output
+cd /Users/a/MAI/sem2/trace2flow && ./.venv/bin/python3 src/workflow_memory/cli.py memory-run --task "Task description" --output
 ```
 
-### 2. Learn from a Run
-After a successful `run`, optimize it to create memory:
+### 2. Baseline & Learn (When no memory exists)
+If `memory-run` is slow or fails, establish a fresh baseline and optimize:
 ```bash
-/Users/a/MAI/sem2/trace2flow/.venv/bin/python3 -m workflow_memory.cli optimize --run-id <UUID_FROM_RUN>
+# Run baseline
+cd /Users/a/MAI/sem2/trace2flow && ./.venv/bin/python3 src/workflow_memory/cli.py run --task "Task description" --output
+
+# Optimize (using run_id from output)
+./.venv/bin/python3 src/workflow_memory/cli.py optimize --run-id <UUID>
 ```
 
-### 3. Execute with Memory
-Use this for repeating tasks on known sites. It's faster and more reliable.
+## Batch Processing (Evaluations)
+To run a full test suite and compare Baseline vs Memory performance:
 ```bash
-/Users/a/MAI/sem2/trace2flow/.venv/bin/python3 -m workflow_memory.cli memory-run --task "Your task" --output
+cd /Users/a/MAI/sem2/trace2flow && ./.venv/bin/python3 src/workflow_memory/cli.py eval-batch --suite tasks/mai_schedule_eval.yaml --output
 ```
 
-### 4. Run Evaluation Suites
-To compare baseline vs memory performance:
+## Demo Mode (For Visualization)
+Use `--no-headless` to see the Chromium window during the run:
 ```bash
-/Users/a/MAI/sem2/trace2flow/.venv/bin/python3 -m workflow_memory.cli eval-batch --suite tasks/mai_schedule_eval.yaml --output
+./.venv/bin/python3 src/workflow_memory/cli.py memory-run --task "..." --no-headless
 ```
 
-## Domain Specifics
+## Internal Logic
+- **SQLite DB**: Data lives in `data/workflow_memory.sqlite`.
+- **Artifacts**: Each run is saved in `artifacts/runs/`.
+- **Hints**: LLM generates `direct_url` (to skip UI) and `page_hints` (to identify success states).
 
-- **MAI Schedule**: Use this for any requests related to MAI university schedules.
-  - Task example: "Find schedule for group M8O-105BV-25 on mai.ru"
-- **Web Scraping**: Excellent for navigating sites like `books.toscrape.com` or `quotes.toscrape.com`.
-
-## Knowledge Retrieval
-
-- **Site Graph**: Trace2Flow builds a graph of site pages. Each node stores URL patterns, purpose, and query parameters.
-- **Hints**: Memory hints suggest direct URLs to bypass tedious navigation.
-
-For more details on implementation, see [Architecture Reference](references/architecture.md).
+For architecture details, see [references/architecture.md](references/architecture.md).

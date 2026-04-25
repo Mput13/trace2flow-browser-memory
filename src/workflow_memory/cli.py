@@ -254,3 +254,5 @@ def eval_batch(
         typer.echo(f"Memory success:   {summary['memory_success_rate']:.0%}")
         typer.echo(f"Avg action delta: {summary['avg_action_delta']:.1f}")
         typer.echo(f"Memory used in:   {summary['memory_used_count']} cases")
+if __name__ == "__main__":
+    app()

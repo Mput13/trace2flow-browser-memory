@@ -193,7 +193,7 @@ def run_memory_task(
         store = ArtifactStore(artifacts_root)
 
         if runner is None:
-            runner = BrowserRunner.from_config(config, headless=True)
+            runner = BrowserRunner.from_config(config, headless=False)
 
         error_message: str | None = None
         history = None
