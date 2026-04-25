@@ -100,6 +100,29 @@ class RunRepository:
             )
             connection.commit()
 
+    def update_memory_quality(
+        self,
+        memory_id: str,
+        action_count_rerun: int,
+        improvement_pct: float,
+    ) -> None:
+        if improvement_pct >= 0.10:
+            quality = "helpful"
+        elif improvement_pct >= -0.05:
+            quality = "neutral"
+        else:
+            quality = "harmful"
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                UPDATE memories
+                SET action_count_rerun=?, improvement_pct=?, quality=?
+                WHERE memory_id=?
+                """,
+                (action_count_rerun, improvement_pct, quality, memory_id),
+            )
+            conn.commit()
+
     def get_memories_for_site(self, site_key: str) -> list[dict]:
         with sqlite3.connect(self.db_path) as connection:
             connection.row_factory = sqlite3.Row
@@ -108,9 +131,9 @@ class RunRepository:
                 SELECT
                   memory_id, site, task, task_family,
                   hint_packet_json, source_run_id, admitted_at,
-                  action_count_baseline, action_count_rerun, improvement_pct
+                  action_count_baseline, action_count_rerun, improvement_pct, quality
                 FROM memories
-                WHERE site = ?
+                WHERE site = ? AND quality != 'harmful'
                 """,
                 (site_key,),
             ).fetchall()

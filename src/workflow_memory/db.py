@@ -33,10 +33,16 @@ def initialize_db(path: Path) -> None:
               admitted_at TEXT NOT NULL,
               action_count_baseline INTEGER,
               action_count_rerun INTEGER,
-              improvement_pct REAL
+              improvement_pct REAL,
+              quality TEXT NOT NULL DEFAULT 'unknown'
             )
             """
         )
+        # Migration: add quality column if it doesn't exist yet
+        try:
+            connection.execute("ALTER TABLE memories ADD COLUMN quality TEXT NOT NULL DEFAULT 'unknown'")
+        except Exception:
+            pass
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS site_pages (

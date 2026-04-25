@@ -17,6 +17,30 @@ def _relative_improvement(baseline: float, rerun: float) -> float:
     return (baseline - rerun) / baseline
 
 
+def _validate_direct_url(direct_url: str | None, urls_visited: list[str], task: str) -> str | None:
+    """Return direct_url only if it is a genuine shortcut.
+
+    Rejects the URL when:
+    - it is None or empty
+    - it equals the first URL visited (no shortcut — agent started there anyway)
+    - it appears in the first third of urls_visited (not near the goal)
+    """
+    if not direct_url or not urls_visited:
+        return None
+    deduped = list(dict.fromkeys(u for u in urls_visited if u))
+    if not deduped:
+        return None
+    if direct_url == deduped[0]:
+        return None
+    try:
+        pos = deduped.index(direct_url)
+        if pos / len(deduped) < 0.4:
+            return None
+    except ValueError:
+        return None
+    return direct_url
+
+
 def should_admit_memory(
     baseline_metrics: dict[str, Any],
     rerun_metrics: dict[str, Any],
@@ -127,6 +151,12 @@ def run_optimize(run_id: str, config: ProjectConfig) -> dict[str, Any]:
         )
     except Exception as exc:
         return {"admitted": False, "reason": f"llm_error: {exc}"}
+
+    # Validate direct_url — only keep it if it's a genuine shortcut
+    raw_direct_url = response.optimized_workflow.get("direct_url")
+    validated_direct_url = _validate_direct_url(raw_direct_url, unique_urls, task)
+    if validated_direct_url != raw_direct_url:
+        response.optimized_workflow["direct_url"] = validated_direct_url
 
     # Build hint packet and store
     hint_packet = build_hint_packet(

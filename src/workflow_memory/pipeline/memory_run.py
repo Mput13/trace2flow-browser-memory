@@ -40,6 +40,29 @@ def prepare_memory_run(task: str, memory_entry: dict[str, Any]) -> dict[str, Any
     }
 
 
+def _classify_task(task: str) -> str:
+    """Classify task as 'lookup' or 'search'.
+
+    Lookup tasks have a specific target reachable via a direct URL (e.g. "find
+    the schedule for group X").  Search tasks iterate over a result set with no
+    shortcut URL (e.g. "find ALL books in category Y").
+
+    Returns 'search' or 'lookup'.
+    """
+    import re
+    search_patterns = [
+        r"\bнайди все\b", r"\bпокажи все\b", r"\bсписок всех\b",
+        r"\bсколько\b", r"\bперечисли\b",
+        r"\bfind all\b", r"\blist all\b", r"\bhow many\b",
+        r"\bshow all\b", r"\bget all\b",
+    ]
+    lowered = task.lower()
+    for pat in search_patterns:
+        if re.search(pat, lowered):
+            return "search"
+    return "lookup"
+
+
 def _extract_goal(task: str) -> str:
     """Strip navigation URLs from a task string, keeping only the outcome goal.
 
@@ -62,7 +85,10 @@ def build_memory_prompt(
     hint_packet: dict[str, Any],
     site_pages: list[dict] | None = None,
 ) -> str:
-    has_direct = bool(hint_packet.get("direct_url"))
+    task_type = _classify_task(task)
+    # Suppress direct_url for search tasks — no shortcut URL exists for "find all X"
+    effective_direct = hint_packet.get("direct_url") if task_type == "lookup" else None
+    has_direct = bool(effective_direct)
 
     if has_direct:
         goal = _extract_goal(task)
@@ -95,9 +121,9 @@ def build_memory_prompt(
             lines.append(f"  {page['url_pattern']}{params_str} — {page['description']}{caveat}")
         lines.append("")
 
-    if hint_packet.get("direct_url"):
+    if effective_direct:
         lines.append(
-            f"Recommended entry point (worked in a previous run): {hint_packet['direct_url']}"
+            f"Recommended entry point (worked in a previous run): {effective_direct}"
         )
         lines.append("")
     if hint_packet.get("likely_path"):
@@ -252,6 +278,16 @@ def run_memory_task(
         )
         run_dir = artifacts_root / "runs" / run_id
         repo.insert_run(run, paths, artifact_dir=run_dir)
+
+        # Post-hoc quality update — measure actual improvement vs baseline
+        baseline_actions = memory.get("action_count_baseline") or 0
+        if baseline_actions > 0:
+            improvement = (baseline_actions - action_count) / baseline_actions
+            repo.update_memory_quality(
+                memory_id=memory["memory_id"],
+                action_count_rerun=action_count,
+                improvement_pct=improvement,
+            )
 
         return {
             "run_id": run_id,
