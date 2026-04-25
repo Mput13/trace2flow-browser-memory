@@ -1,30 +1,27 @@
-# Phase 1 Baseline Runbook
+# Руководство по запуску Phase 1 Baseline
 
-Operator guide for running the Phase 1 baseline harness. Assumes plan 01-01 and
-plan 01-02 are complete and `.venv/` is populated via `pip install -e .`.
+Операторное руководство для запуска базового стенда Phase 1. Предполагается, что планы 01-01 и 01-02 выполнены, а `.venv/` заполнен через `pip install -e .`.
 
-## Setup
+## Подготовка
 
-1. Install Chromium once (separate from the Python package):
+1. Установите Chromium один раз (отдельно от Python-пакета):
    ```
    .venv/bin/playwright install chromium
    ```
-2. Populate `.env` from `.env.example`. At minimum set `OPENAI_API_KEY`. The
-   MAI schedule public page used in Phase 1 does NOT require `MAI_USERNAME` /
-   `MAI_PASSWORD`.
-3. Confirm config loads:
+2. Заполните `.env` на основе `.env.example`. Минимум — укажите `OPENAI_API_KEY`. Публичная страница расписания MAI, используемая в Phase 1, **не требует** `MAI_USERNAME` / `MAI_PASSWORD`.
+3. Проверьте загрузку конфига:
    ```
    .venv/bin/python -c "from workflow_memory.config import load_config; from pathlib import Path; print(load_config(Path('config/project.yaml')))"
    ```
 
-## Run a single task
+## Запуск одной задачи
 
-Quick form (copy-paste):
+Короткая форма (для копирования):
 ```
 .venv/bin/workflow-memory baseline --site mai_schedule --task-family schedule_lookup --input '{"group":"М3О-210Б-23","date":"2026-04-27"}' --config config/project.yaml
 ```
 
-Multi-line form for readability:
+Многострочная форма для читаемости:
 ```
 .venv/bin/workflow-memory baseline \
     --site mai_schedule \
@@ -33,106 +30,94 @@ Multi-line form for readability:
     --config config/project.yaml
 ```
 
-The command prints `run_id`, `status`, `action_count`, `elapsed_seconds`.
-Artifacts land under `artifacts/runs/<run_id>/` and a row is inserted into
-`data/workflow_memory.sqlite` (path controlled by `config/project.yaml`).
+Команда выводит `run_id`, `status`, `action_count`, `elapsed_seconds`.
+Артефакты сохраняются в `artifacts/runs/<run_id>/`, строка добавляется в `data/workflow_memory.sqlite` (путь задаётся в `config/project.yaml`).
 
-## Run the full suite
+## Запуск полного набора задач
 
-Quick form (copy-paste):
+Короткая форма:
 ```
 .venv/bin/workflow-memory baseline-suite --suite tasks/mai_schedule.yaml --config config/project.yaml
 ```
 
-Multi-line form for readability:
+Многострочная форма:
 ```
 .venv/bin/workflow-memory baseline-suite \
     --suite tasks/mai_schedule.yaml \
     --config config/project.yaml
 ```
 
-Or via the helper script:
+Или через вспомогательный скрипт:
 
 ```
 .venv/bin/python scripts/run_baseline_suite.py tasks/mai_schedule.yaml
 ```
 
-Each input in the suite produces one run. The command prints a per-run line
-and a final `Suite complete: total=N succeeded=X failed=Y` summary.
+Каждый элемент набора порождает один прогон. Команда выводит строку по каждому прогону и итоговую строку `Suite complete: total=N succeeded=X failed=Y`.
 
-## Inspect artifacts
+## Просмотр артефактов
 
-Each run directory (`artifacts/runs/<run_id>/`) contains three files:
+Каждая директория прогона (`artifacts/runs/<run_id>/`) содержит три файла:
 
-- `trace.json` — full `AgentHistoryList.model_dump()` output from browser-use.
-  Contains per-step actions, browser state snippets, LLM messages. Large.
-- `normalized.json` — compact project-specific summary. THE stable schema
-  Phase 2 and Phase 3 consume. Keys:
+- `trace.json` — полный вывод `AgentHistoryList.model_dump()` от browser-use. Содержит пошаговые действия, снимки состояния браузера, сообщения LLM. Большой файл.
+- `normalized.json` — компактная сводка в формате проекта. **Стабильная схема**, которую потребляют Phase 2 и Phase 3. Ключи:
 
-  | Key | Type | Description |
-  |-----|------|-------------|
-  | `run_id` | str | UUIDv7 string uniquely identifying this run |
-  | `site` | str | e.g. `"mai_schedule"` |
-  | `task_family` | str | e.g. `"schedule_lookup"` |
-  | `task_input` | dict | Whatever was passed on `--input` |
-  | `run_mode` | str | `"baseline"` in Phase 1 |
+  | Ключ | Тип | Описание |
+  |------|-----|----------|
+  | `run_id` | str | UUIDv7-строка — уникальный идентификатор прогона |
+  | `site` | str | например `"mai_schedule"` |
+  | `task_family` | str | например `"schedule_lookup"` |
+  | `task_input` | dict | То, что передано через `--input` |
+  | `run_mode` | str | `"baseline"` в Phase 1 |
   | `status` | str | `"succeeded"` / `"failed_verification"` / `"failed_execution"` |
-  | `elapsed_seconds` | float | Wall clock seconds for agent.run_sync |
-  | `action_count` | int | Number of agent steps taken |
-  | `action_names` | list[str] | Ordered action names from agent history |
-  | `final_result` | str \| null | `history.final_result()` from browser-use |
-  | `agent_success` | bool \| null | `history.is_successful()` from browser-use |
-  | `is_done` | bool | `history.is_done()` from browser-use |
-  | `errors` | list[str] | Non-null per-step error strings |
-  | `urls_visited` | list[str \| null] | `history.urls()` — pages visited |
+  | `elapsed_seconds` | float | Реальное время выполнения `agent.run_sync` |
+  | `action_count` | int | Количество шагов агента |
+  | `action_names` | list[str] | Упорядоченные названия действий из истории агента |
+  | `final_result` | str \| null | `history.final_result()` из browser-use |
+  | `agent_success` | bool \| null | `history.is_successful()` из browser-use |
+  | `is_done` | bool | `history.is_done()` из browser-use |
+  | `errors` | list[str] | Ненулевые строки ошибок по шагам |
+  | `urls_visited` | list[str \| null] | `history.urls()` — посещённые страницы |
 
-- `result.json` — human-readable summary (`run_id`, `status`, `final_result`,
-  `agent_success`, `elapsed_seconds`, `action_count`, optional `error`).
+- `result.json` — читаемая человеком сводка (`run_id`, `status`, `final_result`, `agent_success`, `elapsed_seconds`, `action_count`, опционально `error`).
 
-Inspect a specific run:
+Просмотр конкретного прогона:
 ```
 cat artifacts/runs/<run_id>/result.json
 jq . artifacts/runs/<run_id>/normalized.json
 ```
 
-List runs via SQLite:
+Список прогонов через SQLite:
 ```
 sqlite3 data/workflow_memory.sqlite \
     "SELECT run_id, site, task_family, status, json_extract(metrics_json,'$.elapsed_seconds') FROM runs ORDER BY rowid DESC LIMIT 20;"
 ```
 
-## Reproducibility check
+## Проверка воспроизводимости
 
-Run the same task twice and confirm:
+Запустите одну и ту же задачу дважды и убедитесь:
 
-1. Two distinct `run_id`s are produced.
-2. Two separate artifact directories exist.
-3. Both pass schema validation:
+1. Получены два разных `run_id`.
+2. Созданы две отдельные директории артефактов.
+3. Обе прошли валидацию схемы:
    ```
    .venv/bin/python scripts/check_artifact_schema.py artifacts
    ```
-   Expected: every run printed with `OK`, process exit code 0.
-4. `status` is `"succeeded"` for at least one run (MAI schedule page depends
-   on site availability and agent navigation luck; one retry is acceptable
-   for Phase 1 per the research-prototype framing).
+   Ожидается: каждый прогон выведен с `OK`, код завершения 0.
+4. `status` равен `"succeeded"` хотя бы для одного прогона (страница расписания MAI зависит от доступности сайта и удачи навигации агента; одна повторная попытка допустима в рамках исследовательского прототипа Phase 1).
 
-If `status` is `"failed_execution"` on every attempt, inspect `trace.json`
-via `jq '.history[-1]' artifacts/runs/<run_id>/trace.json` to diagnose.
-Common causes:
+Если `status` равен `"failed_execution"` при каждой попытке, изучите `trace.json`:
+```
+jq '.history[-1]' artifacts/runs/<run_id>/trace.json
+```
+Частые причины:
+- Chromium не установлен — выполните `playwright install chromium`.
+- `OPENAI_API_KEY` не задан или недействителен — проверьте `.env`.
+- Сайт MAI временно недоступен — повторите позже.
+- `max_steps=25` слишком мало для этой группы/даты — попробуйте `--max-steps 35`.
 
-- Chromium not installed — run `playwright install chromium`.
-- `OPENAI_API_KEY` not set or invalid — re-check `.env`.
-- MAI site temporarily unreachable — retry later.
-- `max_steps=25` too low for this group/date — try `--max-steps 35`.
+## Известные ограничения Phase 1
 
-## Honest known limitations (Phase 1)
-
-- Verifier is rule-based (length > 50 chars + one `\d{1,2}:\d{2}` pattern).
-  It can both false-positive on non-schedule pages that happen to contain
-  times and false-negative on very compact schedule outputs. Refinement is
-  deferred to Phase 3 evaluation.
-- No retry-on-failure. If the agent hits `max_steps`, the run is recorded as
-  `failed_execution` and the operator decides whether to rerun.
-- Cost per run is unbounded by the harness; it is bounded indirectly by
-  `max_steps` and by browser-use's own LLM call pattern. Monitor OpenAI
-  usage when running the full suite.
+- Верификатор — на основе правил (длина > 50 символов + наличие паттерна `\d{1,2}:\d{2}`). Может давать ложноположительные на страницах, случайно содержащих время, и ложноотрицательные на компактных выводах расписания. Доработка отложена до Phase 3.
+- Нет автоматического повтора при сбое. Если агент исчерпывает `max_steps`, прогон записывается как `failed_execution`, оператор решает — повторять или нет.
+- Стоимость одного прогона не ограничена стендом — ограничивается косвенно через `max_steps` и паттерн LLM-вызовов browser-use. При запуске полного набора следите за потреблением OpenAI.

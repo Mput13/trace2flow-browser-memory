@@ -2,30 +2,30 @@ Track: C+D
 
 # Browser Workflow Memory
 
-Research prototype: a workflow-memory layer on top of [browser-use](https://github.com/browser-use/browser-use). Repeated browser tasks on the same site become faster after one successful run — the agent learns the navigation path and reuses it on the next run.
+Исследовательский прототип: слой памяти поверх [browser-use](https://github.com/browser-use/browser-use). Повторяющиеся браузерные задачи на том же сайте выполняются быстрее после первого успешного прогона — агент запоминает путь навигации и переиспользует его.
 
-**Core claim:** repeated browser tasks on the same site should take fewer actions after one successful run.
+**Основное утверждение:** повторяющиеся браузерные задачи на том же сайте должны требовать меньше действий после одного успешного прогона.
 
-See [docs/findings.md](docs/findings.md) for experiment results.
+Результаты экспериментов — в [docs/findings.md](docs/findings.md).
 
-## Quickstart
+## Быстрый старт
 
 ```bash
-# 1. Install dependencies (requires Python 3.11–3.12)
+# 1. Установка зависимостей (требуется Python 3.11–3.12)
 pip install uv
 uv sync
 .venv/bin/playwright install chromium
 
-# 2. Set your LLM key (OpenRouter recommended; plain OpenAI also works)
+# 2. Укажите LLM-ключ (рекомендуется OpenRouter; обычный OpenAI тоже работает)
 export OPENROUTER_API_KEY=sk-or-...
-# or: export OPENAI_API_KEY=sk-...
+# или: export OPENAI_API_KEY=sk-...
 
-# 3. Run a task
+# 3. Запустите задачу
 workflow-memory run \
-  --task "Go to http://books.toscrape.com and find all Mystery books"
+  --task "Зайди на http://books.toscrape.com и найди все книги категории Mystery"
 ```
 
-Output:
+Вывод:
 
 ```
 run_id: <uuid>
@@ -34,41 +34,41 @@ action_count: 8
 elapsed_seconds: 47.3
 ```
 
-## The Memory Cycle
+## Цикл памяти
 
 ```
 run        →  optimize  →  memory-run
-(baseline)    (LLM extracts     (agent gets
-               site knowledge)   navigation hints)
+(baseline)    (LLM извлекает    (агент получает
+               знания о сайте)   подсказки навигации)
 ```
 
-1. **`run`** — agent solves the task from scratch, artifacts saved
-2. **`optimize`** — LLM analyzes the run, extracts a reusable hint packet and site page graph, stores in SQLite
-3. **`memory-run`** — same task again, agent receives hints: direct URL, site map, success cues
+1. **`run`** — агент решает задачу с нуля, артефакты сохраняются
+2. **`optimize`** — LLM анализирует прогон, извлекает hint-пакет и граф страниц сайта, сохраняет в SQLite
+3. **`memory-run`** — та же задача снова, агент получает подсказки: прямой URL, карту сайта, признаки успеха
 
-## Commands
+## Команды
 
-| Command | Description |
+| Команда | Описание |
 |---|---|
-| `run --task "..."` | Baseline run, no memory |
-| `run --task "..." --site <tag>` | Baseline run with explicit site grouping |
-| `optimize --run-id <id>` | Analyze a completed run, store memory |
-| `memory-run --task "..."` | Run with memory hints if available |
-| `eval-batch --suite <file.yaml>` | Full comparison: baseline → optimize → memory for each case |
-| `eval-batch --suite <file.yaml> --output` | Same, JSON output |
+| `run --task "..."` | Базовый прогон без памяти |
+| `run --task "..." --site <тег>` | Базовый прогон с явной группировкой по сайту |
+| `optimize --run-id <id>` | Анализ завершённого прогона, сохранение памяти |
+| `memory-run --task "..."` | Прогон с подсказками из памяти (если есть) |
+| `eval-batch --suite <file.yaml>` | Полное сравнение: baseline → optimize → memory для каждого кейса |
+| `eval-batch --suite <file.yaml> --output` | То же, вывод в JSON |
 
-## Agent Interface (Claude / Codex / OpenClaw)
+## Интерфейс для агентов (Claude / Codex / OpenClaw)
 
-The CLI is the intended agent interface — any orchestrator can call it via subprocess:
+CLI — основной интерфейс для агентов. Любой оркестратор может вызывать команды через subprocess:
 
 ```bash
-# Run a task, capture JSON
+# Запустить задачу, получить JSON
 workflow-memory run \
-  --task "Find the schedule for group М8О-105БВ-25 at https://mai.ru/education/studies/schedule/groups.php" \
+  --task "Найди расписание группы М8О-105БВ-25 на https://mai.ru/education/studies/schedule/groups.php" \
   --output-json
 ```
 
-JSON response:
+JSON-ответ:
 
 ```json
 {
@@ -80,40 +80,40 @@ JSON response:
 }
 ```
 
-After a successful run, extract and store memory:
+После успешного прогона — извлечь и сохранить память:
 
 ```bash
 workflow-memory optimize --run-id 069ec105-...
 ```
 
-Future runs on the same site automatically use stored memory:
+Следующие прогоны на том же сайте автоматически используют сохранённую память:
 
 ```bash
 workflow-memory memory-run \
-  --task "Find the schedule for group М8О-106БВ-25 at https://mai.ru/education/studies/schedule/groups.php"
+  --task "Найди расписание группы М8О-106БВ-25 на https://mai.ru/education/studies/schedule/groups.php"
 ```
 
-## Task Suite Format
+## Формат набора задач
 
-Create a YAML file to run multiple tasks in one batch:
+Создайте YAML-файл для пакетного запуска нескольких задач:
 
 ```yaml
 site: books.toscrape.com
 task_family: book_search
 cases:
   - case_id: books-01
-    task: "Go to http://books.toscrape.com and find all Mystery books"
+    task: "Зайди на http://books.toscrape.com и найди все книги Mystery"
   - case_id: books-02
-    task: "Go to http://books.toscrape.com and find all Science Fiction books"
+    task: "Зайди на http://books.toscrape.com и найди все книги Science Fiction"
 ```
 
-Run the full baseline-vs-memory comparison:
+Запуск полного сравнения baseline vs memory:
 
 ```bash
 workflow-memory eval-batch --suite tasks/books_toscrape_eval.yaml --output
 ```
 
-## Configuration
+## Конфигурация
 
 `config/project.yaml`:
 
@@ -131,46 +131,46 @@ retrieval:
   fuzzy_threshold: 0.75
 ```
 
-Set `OPENROUTER_API_KEY` in the environment or in `.env`.
+`OPENROUTER_API_KEY` задаётся в переменных окружения или в `.env`.
 
-## Site Graph
+## Граф страниц сайта
 
-The memory system builds a per-site page graph from observed runs. Each node stores:
-- URL pattern (with `{param}` placeholders)
-- What the page does and when to use it
-- Query parameters and their meaning
-- Confidence score (decays over 90 days, resets on confirmed visit)
+Система памяти строит граф страниц по каждому сайту на основе наблюдаемых прогонов. Каждый узел хранит:
+- URL-паттерн (с плейсхолдерами `{param}`)
+- Что делает страница и когда её использовать
+- Query-параметры и их смысл
+- Уровень уверенности (затухает за 90 дней, сбрасывается при подтверждённом визите)
 
-This lets the agent navigate directly to relevant pages on repeat visits, even for tasks with different parameters (e.g., a different group on the same university schedule site).
+Это позволяет агенту переходить напрямую к нужным страницам при повторных визитах, даже для задач с другими параметрами (например, другая группа на том же сайте расписания университета).
 
-## Project Structure
+## Структура проекта
 
 ```
 src/workflow_memory/
-  cli.py              # Typer CLI entry point
+  cli.py              # CLI-точка входа (Typer)
   pipeline/
-    baseline.py       # Single baseline run
-    optimize.py       # Optimization pass + memory storage
-    memory_run.py     # Memory-augmented run
+    baseline.py       # Базовый прогон
+    optimize.py       # Шаг оптимизации + сохранение памяти
+    memory_run.py     # Прогон с памятью
   eval/
-    batch.py          # Eval suite runner
-    reporting.py      # Metrics summary
+    batch.py          # Запуск набора задач
+    reporting.py      # Агрегация метрик
   storage/
     repository.py     # SQLite CRUD (runs, memories, site_pages)
   optimization/
-    optimizer.py      # LLM-based hint extraction
+    optimizer.py      # LLM-извлечение подсказок
   retrieval/
-    scoring.py        # Fuzzy task matching
-tasks/                # Task suite YAML files
-results/              # Eval output JSON
+    scoring.py        # Нечёткое сопоставление задач
+tasks/                # YAML-файлы наборов задач
+results/              # JSON с результатами eval
 docs/
-  findings.md         # Experiment results
+  findings.md         # Результаты экспериментов
 ```
 
-## Running Tests
+## Запуск тестов
 
 ```bash
 python -m pytest tests/ -q
 ```
 
-145 tests, no external dependencies required.
+145 тестов, внешние зависимости не требуются.

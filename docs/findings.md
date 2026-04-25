@@ -1,137 +1,137 @@
-# Experiment Findings
+# Результаты эксперимента
 
-## Setup
+## Постановка
 
-**Hypothesis:** A workflow-memory layer can reduce the number of browser actions on repeated tasks on the same site.
+**Гипотеза:** слой памяти рабочих процессов способен сократить количество браузерных действий при повторении задач на том же сайте.
 
-**Method:** For each task we run three steps:
-1. **Baseline** — agent solves the task with no prior knowledge
-2. **Optimize** — LLM analyzes the baseline run, extracts a hint packet (direct URL, site page graph, navigation hints) and stores it in SQLite
-3. **Memory-run** — same task, agent receives the stored hints at the start of the prompt
+**Метод:** для каждой задачи выполняется три шага:
+1. **Baseline** — агент решает задачу с нуля, без предварительных знаний
+2. **Optimize** — LLM анализирует baseline-прогон, извлекает hint-пакет (прямой URL, граф страниц сайта, подсказки навигации) и сохраняет в SQLite
+3. **Memory-run** — та же задача, агент получает сохранённые подсказки в начале промпта
 
-**Metric:** `action_count` (number of browser actions). Secondary: `elapsed_seconds`, `success_rate`.
+**Метрика:** `action_count` (количество браузерных действий). Вторичные: `elapsed_seconds`, `success_rate`.
 
-**Sites tested:**
-- `mai.ru` — Russian university schedule lookup (dynamic filter UI, Cyrillic, slow page loads)
-- `books.toscrape.com` — Static book catalog (designed for scraping, fast, predictable)
-- `quotes.toscrape.com` — Quote collection with author/tag pages (paginated, simple DOM)
+**Тестируемые сайты:**
+- `mai.ru` — поиск расписания российского университета (динамический AJAX-фильтр, кириллица, медленная загрузка)
+- `books.toscrape.com` — статичный каталог книг (создан для скрапинга, быстрый, предсказуемый)
+- `quotes.toscrape.com` — коллекция цитат со страницами авторов/тегов (пагинация, простой DOM)
 
-**LLM:** OpenRouter / google/gemini-3-flash-preview (judge), qwen/qwen3.6-plus (optimizer)
+**LLM:** OpenRouter / google/gemini-3-flash-preview (судья), qwen/qwen3.6-plus (оптимизатор)
 
 ---
 
-## Results
+## Результаты
 
-### Summary
+### Сводка
 
-| Site | Cases | Baseline success | Memory success | Avg actions baseline | Avg actions memory | Avg reduction |
-|------|-------|-----------------|----------------|----------------------|--------------------|---------------|
+| Сайт | Кейсы | Успех baseline | Успех memory | Ср. действий baseline | Ср. действий memory | Ср. сокращение |
+|------|-------|---------------|--------------|----------------------|---------------------|----------------|
 | mai.ru | 8 | 88% (7/8) | 88% (7/8) | 16.4 | 10.9 | **+31.6%** |
 | books.toscrape.com | 6 | 100% (6/6) | 100% (6/6) | 6.0 | 4.2 | **+27.2%** |
 | quotes.toscrape.com | 6 | 100% (6/6) | 83% (5/6) | 10.8 | 12.7 | **−19.4%** |
-| **Total** | **20** | **95% (19/20)** | **90% (18/20)** | **11.6** | **9.4** | **+15.0%** |
+| **Итого** | **20** | **95% (19/20)** | **90% (18/20)** | **11.6** | **9.4** | **+15.0%** |
 
-Overall: 232 baseline actions → 188 memory actions = **44 actions saved (−19.0% total)**. Memory retrieved for 20/20 cases.
+Итог: 232 действия baseline → 188 с памятью = **44 сэкономленных действия (−19.0% суммарно)**. Память найдена для 20/20 кейсов.
 
-### Per-case Results
+### Результаты по кейсам
 
-#### mai.ru — Schedule Lookup
+#### mai.ru — поиск расписания
 
-| Case | Task | Baseline actions | Memory actions | Delta | Memory used |
-|------|------|-----------------|----------------|-------|-------------|
-| mai-s01 | М8О-105БВ-25, Mon 28.04 (same group) | 14 | 18 | **−4** ⚠️ | ✓ |
-| mai-s02 | М8О-105БВ-25, Wed 30.04 (same group) | 15 | 10 | +5 | ✓ |
-| mai-s03 | М8О-106БВ-25, Mon 28.04 (new group) | 15 | 8 | +7 | ✓ |
-| mai-s04 | М8О-107БВ-25, Tue 29.04 (new group) | 15 | 9 | +6 | ✓ |
-| mai-s05 | М8О-108БВ-25, Wed 30.04 (new group) | 20 | 3 | **+17 (85%)** 🏆 | ✓ |
-| mai-s06 | М8О-205БВ-25, Mon 28.04 (2nd year) | 19 | 17 | +2 ⚠️ both failed_verification | ✓ |
-| mai-s07 | М8О-105БВ-25, Fri 02.05 (same group) | 13 | 9 | +4 | ✓ |
-| mai-s08 | М3О-101БВ-25, Tue 29.04 (Institute 3) | 20 | 13 | +7 | ✓ |
+| Кейс | Задача | Действий baseline | Действий memory | Дельта | Память |
+|------|--------|------------------|-----------------|--------|--------|
+| mai-s01 | М8О-105БВ-25, пн 28.04 (та же группа) | 14 | 18 | **−4** ⚠️ | ✓ |
+| mai-s02 | М8О-105БВ-25, ср 30.04 (та же группа) | 15 | 10 | +5 | ✓ |
+| mai-s03 | М8О-106БВ-25, пн 28.04 (новая группа) | 15 | 8 | +7 | ✓ |
+| mai-s04 | М8О-107БВ-25, вт 29.04 (новая группа) | 15 | 9 | +6 | ✓ |
+| mai-s05 | М8О-108БВ-25, ср 30.04 (новая группа) | 20 | 3 | **+17 (85%)** 🏆 | ✓ |
+| mai-s06 | М8О-205БВ-25, пн 28.04 (2 курс) | 19 | 17 | +2 ⚠️ оба failed_verification | ✓ |
+| mai-s07 | М8О-105БВ-25, пт 02.05 (та же группа) | 13 | 9 | +4 | ✓ |
+| mai-s08 | М3О-101БВ-25, вт 29.04 (Институт 3) | 20 | 13 | +7 | ✓ |
 
-#### books.toscrape.com — Book Search
+#### books.toscrape.com — поиск книг
 
-| Case | Task | Baseline actions | Memory actions | Delta | Memory used |
-|------|------|-----------------|----------------|-------|-------------|
-| books-01 | Mystery books | 15 | 8 | **+7 (47%)** | ✓ |
+| Кейс | Задача | Действий baseline | Действий memory | Дельта | Память |
+|------|--------|------------------|-----------------|--------|--------|
+| books-01 | Книги Mystery | 15 | 8 | **+7 (47%)** | ✓ |
 | books-02 | Science Fiction | 4 | 3 | +1 | ✓ |
-| books-03 | Travel books | 4 | 3 | +1 | ✓ |
+| books-03 | Travel | 4 | 3 | +1 | ✓ |
 | books-04 | Fantasy < £10 | 7 | 7 | 0 | ✓ |
-| books-05 | Romance books | 3 | 2 | +1 | ✓ |
-| books-06 | History books | 3 | 2 | +1 | ✓ |
+| books-05 | Romance | 3 | 2 | +1 | ✓ |
+| books-06 | History | 3 | 2 | +1 | ✓ |
 
-#### quotes.toscrape.com — Quote Search
+#### quotes.toscrape.com — поиск цитат
 
-| Case | Task | Baseline actions | Memory actions | Delta | Memory used |
-|------|------|-----------------|----------------|-------|-------------|
-| quotes-01 | Albert Einstein | 19 | 16 | +3 | ✓ |
-| quotes-02 | tagged 'love' | 6 | 7 | **−1** ⚠️ | ✓ |
-| quotes-03 | Mark Twain | 14 | 19 | **−5** ⚠️ | ✓ |
-| quotes-04 | tagged 'inspirational' | 6 | 6 | 0 | ✓ |
-| quotes-05 | J.K. Rowling | 15 | 21 | **−6** ❌ memory failed_execution | ✓ |
-| quotes-06 | tagged 'humor' | 5 | 7 | **−2** ⚠️ | ✓ |
+| Кейс | Задача | Действий baseline | Действий memory | Дельта | Память |
+|------|--------|------------------|-----------------|--------|--------|
+| quotes-01 | Альберт Эйнштейн | 19 | 16 | +3 | ✓ |
+| quotes-02 | тег 'love' | 6 | 7 | **−1** ⚠️ | ✓ |
+| quotes-03 | Марк Твен | 14 | 19 | **−5** ⚠️ | ✓ |
+| quotes-04 | тег 'inspirational' | 6 | 6 | 0 | ✓ |
+| quotes-05 | Дж. К. Роулинг | 15 | 21 | **−6** ❌ memory failed_execution | ✓ |
+| quotes-06 | тег 'humor' | 5 | 7 | **−2** ⚠️ | ✓ |
 
 ---
 
-## Pre-experiment Run (Manual)
+## Ручной прогон до эксперимента
 
-Before the eval batch, one manual pair was run on mai.ru to validate the pipeline:
+До запуска eval-batch был выполнен один ручной прогон на mai.ru для валидации пайплайна:
 
 | | Baseline | Memory-run |
 |---|---|---|
-| Task | М8О-105БВ-25, Mon 27.04 | same |
+| Задача | М8О-105БВ-25, пн 27.04 | та же |
 | action_count | 22 | 10 |
 | elapsed_seconds | 235 | 175 |
-| status | succeeded | succeeded |
-| **Reduction** | — | **-55% actions, -26% time** |
+| статус | succeeded | succeeded |
+| **Сокращение** | — | **−55% действий, −26% времени** |
 
-The agent in the memory-run navigated directly to `index.php?group=М8О-105БВ-25` on step 1 (driven by `direct_url` hint), though it briefly fell back to the filter UI before completing — still resulting in 12 fewer actions overall.
-
----
-
-## Observations
-
-### What worked
-
-- **Direct URL hint** — the optimizer correctly identified the terminal URL from `urls_visited` and stored it as `direct_url`. On the memory-run the agent used it as the first navigation action.
-- **Site page graph** — after one baseline run on mai.ru, the system extracted two page nodes: the filter UI (`groups.php`) and the direct schedule endpoint (`index.php?group=`). Subsequent runs on the same site get these as navigation hints.
-- **Task retrieval** — fuzzy matching (rapidfuzz token_sort_ratio ≥ 0.75) correctly matched repeated tasks to stored memories across minor rephrasing.
-
-### What didn't work as well
-
-- **Task string conflict** — the original task string contained `groups.php` as the start URL. Even with a `direct_url` hint pointing to `index.php`, the agent sometimes honored the explicit URL in the task string and navigated to the filter page first.
-- **Date-specific tasks** — the direct URL (`index.php?group=М8О-105БВ-25`) shows the full semester schedule, not a filtered view for one date. The agent still needed several actions to locate the correct date row.
-- **Cross-group generalization** — the site graph stores URL patterns with `{group}` placeholders, but the agent's ability to substitute the correct group from the task string depends on the LLM following the hint format.
-
-### Site comparison (actual results)
-
-| Site | Avg baseline | Avg memory | Reduction | Why |
-|------|-------------|------------|-----------|-----|
-| mai.ru | 16.4 | 10.9 | **+31.6%** | Dynamic AJAX filter UI with many dropdowns — direct URL skips all of it |
-| books.toscrape.com | 6.0 | 4.2 | **+27.2%** | Static category URLs discovered on first run, reused directly |
-| quotes.toscrape.com | 10.8 | 12.7 | **−19.4%** | Paginated author/tag pages — wrong memory entry points cause extra navigation |
+При memory-run агент на шаге 1 перешёл напрямую на `index.php?group=М8О-105БВ-25` (по подсказке `direct_url`), хотя кратковременно вернулся в фильтр-UI — в итоге 12 лишних действий было сэкономлено.
 
 ---
 
-## Conclusions
+## Наблюдения
 
-**The hypothesis is partially confirmed.** A single successful run reduces action count on structurally stable sites with direct-URL entry points. The `direct_url` and site graph mechanisms work well when the task involves navigating a multi-step filter UI to reach a predictable endpoint.
+### Что сработало
 
-**Where memory helped (mai.ru, books.toscrape.com):**
-- 232 total baseline actions across 14 cases → 161 with memory = **−31 actions (−26%)**
-- Best single case: mai-s05, 20 → 3 actions (−85%) — agent navigated directly to `index.php?group=М8О-108БВ-25`
-- Cross-group generalization worked: memories from М8О-105БВ-25 were retrieved for М8О-106/107/108БВ-25 via fuzzy matching, and the site graph URL pattern guided correct substitution
-- books.toscrape.com: 100% success on both sides, consistent 1–7 action savings
+- **Подсказка direct_url** — оптимизатор верно определил финальный URL из `urls_visited` и сохранил его как `direct_url`. При memory-run агент использовал его как первое навигационное действие.
+- **Граф страниц сайта** — после одного baseline-прогона на mai.ru система извлекла два узла: фильтр-UI (`groups.php`) и прямой эндпоинт расписания (`index.php?group=`). Последующие прогоны на том же сайте получают эти узлы как подсказки.
+- **Retrieval задач** — нечёткое сопоставление (rapidfuzz token_sort_ratio ≥ 0.75) корректно находило нужную память при незначительных перефразировках.
 
-**Where memory hurt (quotes.toscrape.com):**
-- 4 out of 6 cases showed regression; 1 memory-run failed execution
-- Root cause: the optimizer stored `direct_url` pointing to the homepage or a tag/author page that required the same or more pagination steps than the baseline
-- The site graph for quotes.toscrape.com encodes navigation structure correctly, but the correct entry point per task varies by author/tag — a static `direct_url` doesn't generalize
-- This points to a design gap: `direct_url` needs to be parameterized (e.g., `/author/albert-einstein`) not just the homepage
+### Что не сработало
 
-**Honest assessment:**
-- Memory retrieval fired for 20/20 cases (fuzzy threshold 0.75 worked well)
-- Baseline success rate: 95%; memory success rate: 90% — memory introduced 1 additional failure
-- The -19% regression on quotes is a real finding, not noise: hints that don't match the task's specific author/tag actively mislead the agent
+- **Конфликт строки задачи** — исходная задача содержала `groups.php` как стартовый URL. Даже при наличии подсказки `direct_url` на `index.php`, агент иногда следовал явному URL из задачи и сначала переходил на фильтр-страницу.
+- **Задачи с конкретной датой** — `direct_url` (`index.php?group=М8О-105БВ-25`) показывает расписание за весь семестр, без фильтра по дате. Агенту всё равно требовалось несколько действий чтобы найти нужную строку.
+- **Обобщение на другие группы** — граф сайта хранит URL-паттерны с плейсхолдерами `{group}`, но способность агента подставить правильную группу из строки задачи зависит от того, следует ли LLM формату подсказки.
 
-**Key design insight emerging from this experiment:**  
-Memory helps most when the site has a predictable URL structure per task parameter (university group → direct URL, book category → direct URL). It hurts when the "direct" URL still requires the same traversal work as baseline (paginated search with no shortcut). The site graph needs richer entry-point templates, not just a single `direct_url`.
+### Сравнение сайтов (реальные результаты)
+
+| Сайт | Ср. baseline | Ср. memory | Сокращение | Причина |
+|------|-------------|------------|------------|---------|
+| mai.ru | 16.4 | 10.9 | **+31.6%** | Динамический AJAX-фильтр с дропдаунами — прямой URL пропускает всё |
+| books.toscrape.com | 6.0 | 4.2 | **+27.2%** | Статичные URL категорий найдены с первого прогона, переиспользуются напрямую |
+| quotes.toscrape.com | 10.8 | 12.7 | **−19.4%** | Пагинированные страницы авторов/тегов — неверные точки входа из памяти ведут к лишней навигации |
+
+---
+
+## Выводы
+
+**Гипотеза подтверждена частично.** Один успешный прогон позволяет сократить количество действий на сайтах со стабильной структурой и прямыми URL-точками входа. Механизмы `direct_url` и графа страниц хорошо работают когда задача предполагает прохождение многошагового фильтра до предсказуемого эндпоинта.
+
+**Где память помогла (mai.ru, books.toscrape.com):**
+- 232 действия baseline по 14 кейсам → 161 с памятью = **−31 действие (−26%)**
+- Лучший кейс: mai-s05, 20 → 3 действия (−85%) — агент перешёл напрямую на `index.php?group=М8О-108БВ-25`
+- Межгрупповая генерализация сработала: память от М8О-105БВ-25 применялась к М8О-106/107/108БВ-25 через нечёткий поиск, граф сайта направлял правильную подстановку
+- books.toscrape.com: 100% успех с обеих сторон, стабильная экономия 1–7 действий
+
+**Где память навредила (quotes.toscrape.com):**
+- 4 из 6 кейсов показали регрессию; 1 memory-run завершился ошибкой выполнения
+- Корневая причина: оптимизатор сохранил `direct_url` на главную страницу или страницу тега/автора, которая требует столько же или больше шагов пагинации, чем baseline
+- Граф сайта для quotes.toscrape.com корректно кодирует структуру навигации, но правильная точка входа для каждой задачи зависит от автора/тега — статичный `direct_url` не обобщается
+- Это указывает на конструктивный недостаток: `direct_url` должен быть параметризованным (например, `/author/albert-einstein`), а не только главной страницей
+
+**Честная оценка:**
+- Retrieval памяти срабатывал для 20/20 кейсов (порог нечёткого сопоставления 0.75 работает хорошо)
+- Успешность baseline: 95%; успешность memory: 90% — память добавила 1 дополнительный сбой
+- Регрессия −19% на quotes — реальная находка, не шум: подсказки, не совпадающие с конкретным автором/тегом задачи, активно вводят агента в заблуждение
+
+**Ключевой дизайн-инсайт по итогам эксперимента:**
+Память наиболее эффективна когда сайт имеет предсказуемую URL-структуру для параметра задачи (группа университета → прямой URL, категория книги → прямой URL). Она вредит когда «прямой» URL всё равно требует той же работы по обходу, что и baseline (пагинированный поиск без шортката). Граф сайта нуждается в более богатых шаблонах точек входа, а не только в одном `direct_url`.
